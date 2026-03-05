@@ -15,11 +15,14 @@ from app.database import engine, Base
 #讓 Python 讀取這兩個 model 檔案
 #如果沒 import，create_all() 會找不到表，什麼都不會建立。
 from app.models import case, document
-from app.routers import case  # 絕對路徑導入
+from app.routers import case 
 
 
 #http://127.0.0.1:8000/docs
-app = FastAPI(title="Patent Docketing System")
+#在 FastAPI 專案裡，
+#app = FastAPI(...) 這個物件只需要建立一次，代表FastAPI 的入口物件
+app = FastAPI(title="Patent Docketing System") 
+
 
 app.include_router(case.router)
 

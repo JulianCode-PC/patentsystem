@@ -15,9 +15,13 @@ from app.database import engine, Base
 #讓 Python 讀取這兩個 model 檔案
 #如果沒 import，create_all() 會找不到表，什麼都不會建立。
 from app.models import case, document
+from app.routers import case  # 絕對路徑導入
+
 
 #http://127.0.0.1:8000/docs
 app = FastAPI(title="Patent Docketing System")
+
+app.include_router(case.router)
 
 #根據所有繼承 Base 的 class，自動建立資料表
 Base.metadata.create_all(bind=engine)
@@ -25,3 +29,4 @@ Base.metadata.create_all(bind=engine)
 @app.get("/")
 def root():
     return {"message": "Patent System is running!"}
+

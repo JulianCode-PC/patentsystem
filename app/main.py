@@ -15,7 +15,16 @@ from app.database import engine, Base
 #讓 Python 讀取這兩個 model 檔案
 #如果沒 import，create_all() 會找不到表，什麼都不會建立。
 from app.models import case, document
-from app.routers import case 
+from app.routers import case,document
+
+
+from fastapi import FastAPI, Request, UploadFile, File, Depends, Form
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+from app.database import get_db
+
+
 
 
 #http://127.0.0.1:8000/docs
@@ -25,11 +34,19 @@ app = FastAPI(title="Patent Docketing System")
 
 
 app.include_router(case.router)
+app.include_router(document.router)
+
+templates = Jinja2Templates(directory="templates")
+
+
 
 #根據所有繼承 Base 的 class，自動建立資料表
 Base.metadata.create_all(bind=engine)
 
-@app.get("/")
-def root():
-    return {"message": "Patent System is running!"}
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request, db: Session = Depends(get_db)):
+    # 讀取所有案件
+    from app.models.case import Case
+    cases = db.query(Case).all()
+    return templates.TemplateResponse("index.html", {"request": request, "cases": cases})
 

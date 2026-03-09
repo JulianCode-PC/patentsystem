@@ -13,7 +13,7 @@ ORM 資料表定義檔：定義資料結構：
 
 #欄位型別，Column > 宣告資料表欄位，可以指定型別、設定限制
 #Integer > 整數；String > 字串；DateTime>日期時間
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime,Date
 
 #用來建立資料表之間的關聯（外鍵關係）。
 from sqlalchemy.orm import relationship
@@ -41,6 +41,7 @@ class Case(Base):
     #關聯定義，建立 ORM 關聯。，一個 Case 可以有多個 Document
     #Document 裡會有 case_id 外鍵
     documents = relationship("Document", back_populates="case")
+    deadline = Column(Date, nullable=True)
 
 
 '''

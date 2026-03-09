@@ -1,42 +1,61 @@
-
-'''
-database.py 作用：
-
-1.建立「資料庫連線引擎」
-2.建立「ORM 基底類別」
-3.提供「每次請求用的 Session」
-
-'''
-
-#create_engine 建立資料庫連線
+#create_engine是sqlalchemy裡的函數 → 建立python跟資料庫連線的橋樑
 from sqlalchemy import create_engine
 
-#sessionmaker 建立 Session 工廠；declarative_base 是ORM基底，資料表的祖先
+#導入 SQLAlchemy ORM（物件關聯對映）的兩個核心工具，sessionmaker 和 declarative_base。
+
+#sessionmaker → 建立一個 Session 工廠，用來跟資料庫互動（CRUD：新增、查詢、修改、刪除）。
+#declarative_base → 建立一個 基底類別 Base，使得可以用 Python 類別定義資料表。
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# MySQL 連線字串格式:
+# MySQL 連線字串格式: []
 # "mysql+pymysql://<username>:<password>@<host>:<port>/<database>?charset=utf8mb4"
 DATABASE_URL = "mysql+pymysql://root:iaef2202@localhost:3306/patent_system_db?charset=utf8mb4"
 
-#告訴SQLAlchemy，要連線的MySQL資料庫
-#ORM就知道要存的資料要放哪
-engine = create_engine(DATABASE_URL, echo=True)  # echo=True 會印出 SQL 對於debug有用
 
-#sessionmaker 是SQLAlchemy提供的一個類別工廠(factory function)
-#會回傳一個「Session 類別」，之後呼叫他db = SessionLocal()去建立Session物件。
+#建立資料庫引擎 engine：
+#engine 是 SQLAlchemy 與資料庫溝通的橋樑，echo=True → 開發模式，執行 SQL 時會印出 SQL 指令，方便 debug
+#DATABASE_URL指定資料庫類型與位置
+#建立 engine 後，就可以建立資料表、執行 SQL 指令等操作
+#engine 是 資料庫的「引擎」，它本身不會立刻建立真實連線。
+engine = create_engine(DATABASE_URL, echo=True)  # echo=True 會印出 SQL
+
+#建立 SessionLocal → 每次操作資料庫時使用
+#autocommit=False → 變更資料庫時需要手動 commit
+#autocommit=False → 變更資料庫時需要手動 commit
+#bind=engine → 指定使用剛剛建立的 engine
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-#declarative_base 是SQLAlchemy 提供的函式，產生一個 ORM 的「基底類別」
-#SQLAlchemy 的 ORM 規則是：任何資料表 class 都必須繼承同一個 Base。
-#Base能記錄所有資料表、建立資料表
+#declarative_base 確實是一個函數，
+#在 SQLAlchemy 裡的作用是 生成一個「基底類別」，這個類別本身是用來讓你定義 ORM 類別（對應資料表）的父類
 Base = declarative_base()
 
-# Dependency: 在 route 使用時取得 db session
-def get_db(): 
-    #建一個 Session 物件來操作資料庫；SessionLocal 是「類別」；db 是「物件」；engine 是「連線管理器」
+#在 FastAPI 裡常用來當依賴（dependency）
+#建立一個資料庫 Session，提供給使用者使用，使用完後自動關閉連線
+def get_db():
+    #這裡建立了一個 資料庫 Session，也就是跟資料庫的連線
+    #SessionLocal() 是用 sessionmaker(bind=engine) 創建的 Session 工廠
+    #Session 是真正跟資料庫互動的「工作單位」，會從 engine 池裡取得真實連線，
     db = SessionLocal()
     try:
+        #yield 讓函數變成 generator。在 FastAPI 裡，這意味著：路由可以「拿到這個 session 使用」
+        #路由程式跑完之後，控制權會回到這個函數。
         yield db
     finally:
+        #無論路由執行成功或發生例外，都會執行 db.close()。
+        #釋放資料庫連線，避免連線洩漏
         db.close()
 
+
+
+'''
+database.py 的作用：
+
+負責 設定資料庫連線、建立 ORM 基底、提供資料庫操作的 session。
+
+1.告訴 Python 你的 MySQL 資料庫在哪裡(DATABASE_URL)
+2.建立 SQLAlchemy 的 engine → 讓程式可以跟 MySQL 連線 (engine)
+3.建立 SessionLocal → 每次操作資料庫時使用 (SessionLocal)
+4.建立 Base → 所有 ORM 模型都要繼承它 (Base)
+5.提供 get_db() → 路由中方便取得資料庫 session
+
+'''

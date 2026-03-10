@@ -31,5 +31,6 @@ class Document(Base):
     filename = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
     uploaded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    text_content=Column(String,nullable=True)# 或 Text 型別
 
     case = relationship("Case", back_populates="documents")

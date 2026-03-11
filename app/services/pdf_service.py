@@ -1,10 +1,12 @@
 import os
+import pdfplumber
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
+from typing import Tuple
+
 from app.models.document import Document
 from app.models.case import Case
-from datetime import datetime, timezone
-import pdfplumber
-from app.services.classifier import classifier  # 新增導入
+from app.services.classifier import classifier
 
 class PDFService:
     @staticmethod
@@ -22,34 +24,55 @@ class PDFService:
         return text
 
     @staticmethod
-    def save_pdf_to_db(db: Session, case_id: int, file_path: str, filename: str):
-        """抓文字、分類、算期限、存資料庫"""
-        # 確認 Case 是否存在
-        case = db.query(Case).filter(Case.id == case_id).first()
-        if not case:
-            raise ValueError(f"Case id {case_id} not found")
-
-        # 抓文字
+    def save_pdf_to_db(db: Session, file_path: str, filename: str) -> Tuple[Document, Case]:
+        """
+        抓文字、分類、找案件、存資料庫
+        回傳: (Document, Case)
+        """
+        # 1. 抓文字
         text = PDFService.extract_text_from_pdf(file_path)
         
-        # 用規則引擎處理
-        process_result = classifier.process_document(text, datetime.now())
-
-        # 建立 Document（包含分類結果）
+        # 2. 用規則引擎處理
+        result = classifier.process_document(text)
+        
+        # 3. 從結果取得申請案號和專利名稱
+        fields = result["extracted_data"]["fields"]
+        app_number = fields.get("application_number")
+        title = fields.get("invention_title", "新專利案件")
+        applicant = fields.get("applicant", "")
+        
+        # 4. 用申請案號找或建立 Case
+        case = None
+        if app_number:
+            case = db.query(Case).filter(Case.case_no == app_number).first()
+        
+        if not case:
+            # 沒有找到 → 建立新案件
+            case = Case(
+                case_no=app_number or f"TEMP{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                title=title,
+                applicant=applicant,
+                status="進行中"
+            )
+            db.add(case)
+            db.commit()
+            db.refresh(case)
+        
+        # 5. 建立 Document（關聯到找到/建立的 case）
         document = Document(
-            case_id=case_id,
+            case_id=case.id,  # 這裡用 case.id！
             filename=filename,
             file_path=file_path,
             uploaded_at=datetime.now(timezone.utc),
             text_content=text,
-            doc_type=process_result["doc_type"],
-            extracted_data=process_result["extracted_data"],
-            deadline=process_result["deadline"],
-            deadline_days=process_result["deadline_days"]
+            doc_type=result["doc_type"],
+            extracted_data=result["extracted_data"],
+            deadline=result["deadline"],
+            deadline_days=result["deadline_days"]
         )
-
-        # 存入資料庫
+        
         db.add(document)
         db.commit()
         db.refresh(document)
-        return document
+        
+        return document, case

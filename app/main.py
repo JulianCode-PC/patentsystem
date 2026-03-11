@@ -16,6 +16,7 @@ from app.database import engine, Base
 #如果沒 import，create_all() 會找不到表，什麼都不會建立。
 from app.models import case, document
 from app.routers import case,document
+from app.routers import case_page
 
 
 from fastapi import FastAPI, Request, UploadFile, File, Depends, Form
@@ -35,6 +36,7 @@ app = FastAPI(title="Patent Docketing System")
 
 app.include_router(case.router)
 app.include_router(document.router)
+app.include_router(case_page.router)
 
 templates = Jinja2Templates(directory="templates")
 

@@ -6,14 +6,13 @@ ORM 資料表定義檔：定義資料結構：
 1.定義 cases 資料表
 2.定義欄位型別
 3.定義和 documents 的關聯
-
 '''
 
 # case.py
 
 #欄位型別，Column > 宣告資料表欄位，可以指定型別、設定限制
 #Integer > 整數；String > 字串；DateTime>日期時間
-from sqlalchemy import Column, Integer, String, DateTime,Date
+from sqlalchemy import Column, Integer, String, DateTime, Date
 
 #用來建立資料表之間的關聯（外鍵關係）。
 from sqlalchemy.orm import relationship
@@ -31,17 +30,33 @@ class Case(Base):
 
     #整數型別、主鍵、有索引加快索引
     id = Column(Integer, primary_key=True, index=True)
+    
+    # 🔥 新增：案號（唯一、不可為空）
+    case_no = Column(String(50), unique=True, index=True, nullable=False)
+    
     #字串型別、最大255字，不可為NULL
     title = Column(String(255), nullable=False)
+    
     #字串型別、最大1000字，可以是NULL
     description = Column(String(1000), nullable=True)
     
+    # 🔥 新增：申請人
+    applicant = Column(String(255), nullable=True)
+    
+    # 🔥 新增：申請日
+    filing_date = Column(DateTime, nullable=True)
+    
+    # 🔥 新增：案件狀態
+    status = Column(String(50), default="進行中")
+    
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    #案件期限
+    deadline = Column(Date, nullable=True)
 
     #關聯定義，建立 ORM 關聯。，一個 Case 可以有多個 Document
     #Document 裡會有 case_id 外鍵
     documents = relationship("Document", back_populates="case")
-    deadline = Column(Date, nullable=True)
 
 
 '''
@@ -49,8 +64,13 @@ class Case(Base):
 
 CREATE TABLE cases (
     id INT PRIMARY KEY,
+    case_no VARCHAR(50) NOT NULL UNIQUE,
     title VARCHAR(255) NOT NULL,
     description VARCHAR(1000),
-    created_at DATETIME
+    applicant VARCHAR(255),
+    filing_date DATETIME,
+    status VARCHAR(50) DEFAULT '進行中',
+    created_at DATETIME,
+    deadline DATE
 );
 '''

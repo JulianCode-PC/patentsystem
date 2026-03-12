@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>編輯文件 - {{ doc.filename }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+</head>
+<body class="container mt-4">
+
+<div class="mb-3">
+    <a href="/cases/{{ doc.case_id }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> 返回案件詳情
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header bg-warning">
+        <h4><i class="bi bi-pencil"></i> 編輯文件</h4>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> 
+            <strong>{{ doc.filename }}</strong>
+        </div>
+        
+        <form action="/documents/{{ doc.id }}/edit" method="post">
+            <!-- 檔案名稱 -->
+            <div class="mb-3">
+                <label class="form-label">檔案名稱</label>
+                <input type="text" class="form-control" name="filename" value="{{ doc.filename }}" required>
+                <small class="text-muted">修改文件名稱（不影響實際檔案）</small>
+            </div>
+            
+            <!-- 文件類型 -->
+            <div class="mb-3">
+                <label class="form-label">文件類型</label>
+                <select class="form-select" name="doc_type">
+                    <option value="">請選擇文件類型</option>
+                    <option value="核發申請號通知函" {% if doc.doc_type == '核發申請號通知函' %}selected{% endif %}>核發申請號通知函</option>
+                    <option value="補正通知函" {% if doc.doc_type == '補正通知函' %}selected{% endif %}>補正通知函</option>
+                    <option value="(準)不受理處分書" {% if doc.doc_type == '(準)不受理處分書' %}selected{% endif %}>(準)不受理處分書</option>
+                    <option value="不公開處分書" {% if doc.doc_type == '不公開處分書' %}selected{% endif %}>不公開處分書</option>
+                    <option value="審查意見通知函" {% if doc.doc_type == '審查意見通知函' %}selected{% endif %}>審查意見通知函</option>
+                    <option value="(初審)核准審定書" {% if doc.doc_type == '(初審)核准審定書' %}selected{% endif %}>(初審)核准審定書</option>
+                    <option value="(初審)核駁審定書" {% if doc.doc_type == '(初審)核駁審定書' %}selected{% endif %}>(初審)核駁審定書</option>
+                    <option value="再審查核准審定書" {% if doc.doc_type == '再審查核准審定書' %}selected{% endif %}>再審查核准審定書</option>
+                    <option value="再審查核駁審定書" {% if doc.doc_type == '再審查核駁審定書' %}selected{% endif %}>再審查核駁審定書</option>
+                    <option value="訴願決定書" {% if doc.doc_type == '訴願決定書' %}selected{% endif %}>訴願決定書</option>
+                    <option value="行政訴訟第一審判決" {% if doc.doc_type == '行政訴訟第一審判決' %}selected{% endif %}>行政訴訟第一審判決</option>
+                    <option value="行政訴訟上訴審判決" {% if doc.doc_type == '行政訴訟上訴審判決' %}selected{% endif %}>行政訴訟上訴審判決</option>
+                </select>
+            </div>
+            
+            <!-- 截止日 -->
+            <div class="mb-3">
+                <label class="form-label">截止日</label>
+                <input type="date" class="form-control" name="deadline" 
+                       value="{{ doc.deadline.strftime('%Y-%m-%d') if doc.deadline else '' }}">
+                <small class="text-muted">留空表示無截止日</small>
+            </div>
+            
+            <!-- 隱藏欄位：保留原本的 extracted_data -->
+            <input type="hidden" name="application_number" value="{{ doc.extracted_data.fields.application_number if doc.extracted_data and doc.extracted_data.fields else '' }}">
+            <input type="hidden" name="invention_title" value="{{ doc.extracted_data.fields.invention_title if doc.extracted_data and doc.extracted_data.fields else '' }}">
+            <input type="hidden" name="applicant" value="{{ doc.extracted_data.fields.applicant if doc.extracted_data and doc.extracted_data.fields else '' }}">
+            
+            <hr>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-lg"></i> 儲存修改
+                </button>
+                <a href="/cases/{{ doc.case_id }}" class="btn btn-secondary">
+                    <i class="bi bi-x-lg"></i> 取消
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

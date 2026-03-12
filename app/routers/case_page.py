@@ -136,3 +136,68 @@ def unified_upload_page(request: Request, db: Session = Depends(get_db)):
         "request": request,
         "now": datetime.now()
     })
+
+
+# 🔥 文件編輯頁面
+@router.get("/documents/{document_id}/edit", response_class=HTMLResponse)
+def document_edit_page(request: Request, document_id: int, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="文件不存在")
+    
+    return templates.TemplateResponse("document_edit.html", {
+        "request": request,
+        "doc": doc,
+        "now": datetime.now()
+    })
+
+# 🔥 處理文件編輯表單提交
+@router.post("/documents/{document_id}/edit", response_class=HTMLResponse)
+def document_edit_submit(
+    request: Request,
+    document_id: int,
+    filename: str = Form(...),  # 🔥 新增
+    doc_type: str = Form(None),
+    deadline: str = Form(None),
+    application_number: str = Form(None),  # 隱藏欄位
+    invention_title: str = Form(None),     # 隱藏欄位
+    applicant: str = Form(None),           # 隱藏欄位
+    db: Session = Depends(get_db)
+):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="文件不存在")
+    
+    # 🔥 更新檔案名稱
+    doc.filename = filename
+    
+    # 更新文件類型
+    if doc_type:
+        doc.doc_type = doc_type
+    
+    # 更新截止日
+    if deadline:
+        doc.deadline = datetime.strptime(deadline, "%Y-%m-%d")
+    else:
+        doc.deadline = None
+    
+    # 保留原本的 extracted_data（不讓使用者修改，但用隱藏欄位保留）
+    if not doc.extracted_data:
+        doc.extracted_data = {"fields": {}, "dates": {}}
+    
+    if "fields" not in doc.extracted_data:
+        doc.extracted_data["fields"] = {}
+    
+    # 只更新隱藏欄位傳過來的值（等於保留原值）
+    if application_number:
+        doc.extracted_data["fields"]["application_number"] = application_number
+    
+    if invention_title:
+        doc.extracted_data["fields"]["invention_title"] = invention_title
+    
+    if applicant:
+        doc.extracted_data["fields"]["applicant"] = applicant
+    
+    db.commit()
+    
+    return RedirectResponse(url=f"/cases/{doc.case_id}", status_code=303)

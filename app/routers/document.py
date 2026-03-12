@@ -9,7 +9,7 @@ from datetime import datetime
 from app.database import get_db
 from app.models.document import Document
 from app.models.case import Case
-from app.schemas.document import DocumentOut
+from app.schemas.document import DocumentOut, DocumentUpdate
 from app.services.pdf_service import PDFService
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -17,37 +17,30 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# 🔥 修改：不再需要 case_id，直接上傳後自動對應
+# 上傳文件（自動對應案件）
 @router.post("/upload")
 async def upload_document(
     file: UploadFile = File(...), 
     db: Session = Depends(get_db)
 ):
-    """
-    上傳文件，自動從 PDF 讀取申請案號
-    - 有申請案號 → 對應到現有案件
-    - 無申請案號 → 建立新案件
-    """
-    # 儲存檔案
     file_location = os.path.join(UPLOAD_DIR, file.filename)
     with open(file_location, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    # 處理 PDF（自動找或建立 Case）
     try:
         doc, case = PDFService.save_pdf_to_db(db, file_location, file.filename)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"處理失敗: {str(e)}")
 
-    # 重新導向到該案件的上傳頁
     return RedirectResponse(url=f"/cases/{case.id}/upload", status_code=303)
 
-# 其餘 API 不變
+# 查詢案件的文件
 @router.get("/case/{case_id}")
 def get_documents(case_id: int, db: Session = Depends(get_db)):
     docs = db.query(Document).filter(Document.case_id == case_id).all()
     return docs
 
+# 取得文件抽取資訊
 @router.get("/{document_id}/extracted-info")
 def get_extracted_info(document_id: int, db: Session = Depends(get_db)):
     doc = db.query(Document).filter(Document.id == document_id).first()
@@ -67,14 +60,37 @@ def get_extracted_info(document_id: int, db: Session = Depends(get_db)):
         "is_expiring_soon": days_remaining and days_remaining <= 7
     }
 
-@router.post("/{document_id}/reprocess")
-def reprocess_document(document_id: int, db: Session = Depends(get_db)):
+# 🔥 更新文件
+@router.put("/{document_id}", response_model=DocumentOut)
+def update_document(
+    document_id: int, 
+    doc_update: DocumentUpdate, 
+    db: Session = Depends(get_db)
+):
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail="文件不存在")
+    
+    for key, value in doc_update.dict(exclude_unset=True).items():
+        setattr(doc, key, value)
+    
+    db.commit()
+    db.refresh(doc)
+    return doc
+
+# 🔥 重新分類（重新抓文字 + 分類）
+@router.post("/{document_id}/reclassify")
+def reclassify_document(document_id: int, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="文件不存在")
+    
+    # 重新從 PDF 抓文字
+    new_text = PDFService.extract_text_from_pdf(doc.file_path)
+    doc.text_content = new_text
     
     from app.services.classifier import classifier
-    result = classifier.process_document(doc.text_content, doc.uploaded_at)
+    result = classifier.process_document(new_text, doc.uploaded_at)
     
     doc.doc_type = result["doc_type"]
     doc.extracted_data = result["extracted_data"]
@@ -83,9 +99,9 @@ def reprocess_document(document_id: int, db: Session = Depends(get_db)):
     
     db.commit()
     
-    return {"message": "重新處理完成", "result": result}
+    return {"message": "重新分類完成", "result": result}
 
-# 新增：即將到期 API
+# 即將到期 API
 @router.get("/expiring-soon")
 def get_expiring_documents(days: int = 7, db: Session = Depends(get_db)):
     from datetime import datetime, timedelta
@@ -100,16 +116,13 @@ def get_expiring_documents(days: int = 7, db: Session = Depends(get_db)):
     
     return docs
 
-
-# 🔥 新增：文件下載
+# 文件下載
 @router.get("/{document_id}/download")
 def download_document(document_id: int, db: Session = Depends(get_db)):
-    """下載文件"""
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="文件不存在")
     
-    # 檢查檔案是否存在
     if not os.path.exists(doc.file_path):
         raise HTTPException(status_code=404, detail="檔案實體不存在")
     
@@ -119,10 +132,9 @@ def download_document(document_id: int, db: Session = Depends(get_db)):
         media_type='application/pdf'
     )
 
-# 🔥 新增：文件預覽（在瀏覽器直接打開）
+# 文件預覽
 @router.get("/{document_id}/preview")
 def preview_document(document_id: int, db: Session = Depends(get_db)):
-    """預覽文件（在瀏覽器直接打開 PDF）"""
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="文件不存在")
@@ -134,5 +146,7 @@ def preview_document(document_id: int, db: Session = Depends(get_db)):
         path=doc.file_path,
         filename=doc.filename,
         media_type='application/pdf',
-        headers={"Content-Disposition": "inline"}  # 這行讓瀏覽器直接顯示
+        headers={"Content-Disposition": "inline"}
     )
+
+

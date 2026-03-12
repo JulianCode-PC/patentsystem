@@ -54,23 +54,5 @@ class Case(Base):
     #案件期限
     deadline = Column(Date, nullable=True)
 
-    #關聯定義，建立 ORM 關聯。，一個 Case 可以有多個 Document
-    #Document 裡會有 case_id 外鍵
-    documents = relationship("Document", back_populates="case")
-
-
-'''
-這個 class 最終會變成：
-
-CREATE TABLE cases (
-    id INT PRIMARY KEY,
-    case_no VARCHAR(50) NOT NULL UNIQUE,
-    title VARCHAR(255) NOT NULL,
-    description VARCHAR(1000),
-    applicant VARCHAR(255),
-    filing_date DATETIME,
-    status VARCHAR(50) DEFAULT '進行中',
-    created_at DATETIME,
-    deadline DATE
-);
-'''
+    # 🔥 修改這裡！加上 cascade
+    documents = relationship("Document", back_populates="case", cascade="all, delete-orphan")

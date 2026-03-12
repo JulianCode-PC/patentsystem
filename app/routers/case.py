@@ -6,6 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException
 # Depends → FastAPI 依賴注入，這裡用來自動提供資料庫 session
 # HTTPException → 在 API 裡拋出錯誤，例如 404 找不到案件
 
+from fastapi import UploadFile, File
+from app.services.pdf_service import PDFService
+import os
+
 # ------------------------------
 # 匯入 SQLAlchemy 的 Session
 # ------------------------------
@@ -117,3 +121,23 @@ def delete_case(case_id: int, db: Session = Depends(get_db)):
     db.commit()      # 提交刪除
     return {"detail": "Case deleted"}  
     # 回傳訊息給前端
+
+
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+@router.post("/{case_id}/upload_pdf")
+async def upload_pdf(case_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    # 儲存檔案到本地
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    with open(file_path, "wb") as f:
+        f.write(await file.read())
+
+    # 呼叫 service 存入 DB
+    try:
+        document = PDFService.save_pdf_to_db(db, case_id, file_path, file.filename)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return {"document_id": document.id, "filename": document.filename, "case_id": document.case_id}

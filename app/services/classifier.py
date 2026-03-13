@@ -96,15 +96,19 @@ class PatentClassifier:
     # 🔥 強化版欄位抽取規則（只改這裡！）
     FIELD_RULES = {
         "application_number": [
-            # 原本的
+            
             r'申請[號碼][：:]\s*([A-Z0-9\-]+)',
             r'申請案號[：:]\s*([A-Z0-9\-]+)',
             r'([A-Z]{2}[0-9]{8,})',
             
-            # 🔥 新增：第XXX號
-            r'第\s*([A-Z0-9\-]+)\s*號',  # 這行很重要！
             
-            # 其他規則...
+            r'第\s*([A-Z0-9\-]+)\s*號',
+            r'申請案號數[：:]\s*([A-Z0-9\-]+)',
+            
+
+
+            r'第\s*([A-Z0-9\-]+)\s*號',
+            r'編為第[」"“]?([A-Z0-9\-]+)[」"“]?號',
         ],
         
         # 其他規則完全不變
@@ -116,6 +120,8 @@ class PatentClassifier:
             r'申請人[：:]\s*([^\n]+)',
             r'申請權人[：:]\s*([^\n]+)',
             r'專利權人[：:]\s*([^\n]+)',
+            r'正本[：:]\s*([^（\n]+)',
+            r'正本[：:]\s*([^\n]+)',
         ],
         "invention_title": [
             # 標準格式
@@ -187,16 +193,31 @@ class PatentClassifier:
 
     @classmethod
     def extract_fields(cls, text: str) -> Dict[str, Any]:
-        """抽出關鍵欄位"""
+        """抽出關鍵欄位（強化版）"""
         extracted = {}
         
         for field, patterns in cls.FIELD_RULES.items():
             for pattern in patterns:
                 match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
                 if match:
-                    extracted[field] = match.group(1).strip()
-                    break
+                    value = match.group(1).strip()
                     
+                    # 🔥 新增：過濾掉「名稱：」這類前綴
+                    if field == "applicant":
+                        # 如果值是「名稱：xxx」，只取 xxx
+                        if value.startswith("名稱：") or value.startswith("名稱:"):
+                            value = value[3:].strip()
+                        elif "名稱：" in value or "名稱:" in value:
+                            # 處理「名稱：國立屏東科技大學」這種
+                            parts = re.split(r'名稱[：:]', value)
+                            if len(parts) > 1:
+                                value = parts[1].strip()
+                    
+                    # 只存非空值
+                    if value:
+                        extracted[field] = value
+                        break  # 找到第一個就跳出
+        
         return extracted
 
     @classmethod

@@ -1,8 +1,39 @@
 # Created by venv; see https://docs.python.org/3/library/venv.html
 
-venv/
+# Python 快取
 __pycache__/
 *.pyc
-.env
-.DS_Store
+*.pyo
+*.pyd
 
+# 虛擬環境
+venv/
+env/
+.venv/
+ENV/
+
+# 資料庫
+*.db
+*.sqlite3
+*.sqlite
+
+# 上傳檔案
+uploads/
+*.pdf
+*.jpg
+*.jpeg
+*.png
+
+# IDE 設定
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 環境變數
+.env
+*.env
+
+# 測試檔案
+test_*.py
+test_*.pdf

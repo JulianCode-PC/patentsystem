@@ -23,6 +23,7 @@ from app.database import Base
 #產生預設時間
 from datetime import datetime, timezone
 
+
 #Case 是一個 ORM 映射類別，會對應到一張資料表，因為繼承Base
 class Case(Base):
     #資料庫裡這張表叫：cases
@@ -31,7 +32,7 @@ class Case(Base):
     #整數型別、主鍵、有索引加快索引
     id = Column(Integer, primary_key=True, index=True)
     
-    # 🔥 新增：案號（唯一、不可為空）
+    # 新增：案號（唯一、不可為空）
     case_no = Column(String(50), unique=True, index=True, nullable=False)
     
     #字串型別、最大255字，不可為NULL
@@ -40,13 +41,13 @@ class Case(Base):
     #字串型別、最大1000字，可以是NULL
     description = Column(String(1000), nullable=True)
     
-    # 🔥 新增：申請人
+    # 新增：申請人
     applicant = Column(String(255), nullable=True)
     
-    # 🔥 新增：申請日
+    # 新增：申請日
     filing_date = Column(DateTime, nullable=True)
     
-    # 🔥 新增：案件狀態
+    # 新增：案件狀態
     status = Column(String(50), default="進行中")
     
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
@@ -54,5 +55,5 @@ class Case(Base):
     #案件期限
     deadline = Column(Date, nullable=True)
 
-    # 🔥 修改這裡！加上 cascade
+    # 修改這裡！加上 cascade
     documents = relationship("Document", back_populates="case", cascade="all, delete-orphan")

@@ -1,13 +1,13 @@
 # create_engine是sqlalchemy裡的函數 → 建立python跟資料庫連線的橋樑
 from sqlalchemy import create_engine
 
-# 導入 SQLAlchemy ORM（物件關聯對映）的兩個核心工具，sessionmaker 和 declarative_base。
-# sessionmaker → 建立一個 Session 工廠，用來跟資料庫互動（CRUD：新增、查詢、修改、刪除）。
-# declarative_base → 建立一個 基底類別 Base，使得可以用 Python 類別定義資料表。
+# 導入 SQLAlchemy ORM（物件關聯對映）的兩個核心工具
+# 1.sessionmaker → 建立一個 Session 工廠，用來跟資料庫互動（CRUD：新增、查詢、修改、刪除）。
+# 2.declarative_base → 建立一個 基底類別 Base，使得可以用 Python 類別定義資料表。
 from sqlalchemy.orm import sessionmaker, declarative_base
 import os
 
-# 🔥 改成 SQLite 連線字串
+# 改成 SQLite 連線字串
 # SQLite 不需要帳號密碼，資料會存在專案目錄下的 patent.db 檔案
 DATABASE_URL = "sqlite:///./patent.db"
 

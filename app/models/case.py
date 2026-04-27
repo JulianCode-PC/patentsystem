@@ -57,3 +57,6 @@ class Case(Base):
 
     # 修改這裡！加上 cascade
     documents = relationship("Document", back_populates="case", cascade="all, delete-orphan")
+
+
+    patent_type = Column(String(20), default="發明專利")

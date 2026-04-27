@@ -145,7 +145,7 @@ class PatentClassifier:
             r'判決日期[：:]\s*([^ \n]+)',
         ]
     }
-
+    
     @classmethod
     def classify(cls, text: str) -> str:
         """判斷文件類型（完整12種）"""

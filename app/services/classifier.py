@@ -130,13 +130,16 @@ class PatentClassifier:
             r'設計名稱[：:]\s*([^\n]+)',
             r'專利名稱[：:]\s*([^\n]+)',
             
-            # 🔥 新增：本案「XXX」
-            r'本案[「""]?([^「」\n]+)[」""]?',
+            # 🔥 本案「XXX」或 本案「XXX」。（跨行處理）
+            r'本案[「""]?\s*([^「」\n]+?)\s*[」""]',
             
-            # 🔥 新增：括號裡的內容
+            # 🔥 如果名稱到句號結束
+            r'本案[「""]?([^」」\n。]+)[」」\n。]?',
+            
+            # 🔥 括號內的內容
             r'[（(]([^）)]+)[）)]',
             
-            # 最後手段：抓第一行看起來像名稱的
+            # 最後手段
             r'^([^\n]{5,30})$',
         ],
         "decision_date": [  # 處分/審定日期
@@ -252,7 +255,7 @@ class PatentClassifier:
                 "fields": fields,
                 "dates": dates
             },
-            "deadline": deadline.isoformat() if deadline else None,
+            "deadline": deadline,
             "deadline_days": days
         }
 

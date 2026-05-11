@@ -47,28 +47,42 @@ class PDFService:
             case = db.query(Case).filter(Case.case_no == app_number).first()
         
         if not case:
-            # 沒有找到 → 建立新案件
+            # 沒有找到 → 建立新案件（加上 patent_type）
             case = Case(
                 case_no=app_number or f"TEMP{datetime.now().strftime('%Y%m%d%H%M%S')}",
                 title=title,
                 applicant=applicant,
-                status="進行中"
+                status="進行中",
+                patent_type="發明專利"  # 🔥 加上專利類型
             )
             db.add(case)
             db.commit()
             db.refresh(case)
         
-        # 5. 建立 Document（關聯到找到/建立的 case）
+        # 🔥 5. 處理 deadline：確保是 datetime 物件
+        deadline_value = result.get("deadline")
+        if deadline_value is None:
+            deadline_value = None
+        elif isinstance(deadline_value, str):
+            # 如果是字串，轉成 datetime
+            from datetime import datetime as dt
+            try:
+                deadline_value = dt.strptime(deadline_value, "%Y-%m-%d")
+            except ValueError:
+                deadline_value = None
+        # 如果已經是 datetime 物件，直接使用
+        
+        # 6. 建立 Document（關聯到找到/建立的 case）
         document = Document(
-            case_id=case.id,  # 這裡用 case.id！
+            case_id=case.id,
             filename=filename,
             file_path=file_path,
             uploaded_at=datetime.now(timezone.utc),
             text_content=text,
             doc_type=result["doc_type"],
             extracted_data=result["extracted_data"],
-            deadline=result["deadline"],
-            deadline_days=result["deadline_days"]
+            deadline=deadline_value,  # 🔥 用處理過的 deadline
+            deadline_days=result.get("deadline_days")
         )
         
         db.add(document)

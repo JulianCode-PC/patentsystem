@@ -4,6 +4,8 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 import shutil
 import os
+import uuid
+from pathlib import Path
 from datetime import datetime
 
 from app.database import get_db
@@ -23,7 +25,9 @@ async def upload_document(
     file: UploadFile = File(...), 
     db: Session = Depends(get_db)
 ):
-    file_location = os.path.join(UPLOAD_DIR, file.filename)
+    safe_name = Path(file.filename or "upload.pdf").name
+    stored_name = f"{uuid.uuid4().hex}_{safe_name}"
+    file_location = os.path.join(UPLOAD_DIR, stored_name)
     with open(file_location, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
@@ -57,7 +61,7 @@ def get_extracted_info(document_id: int, db: Session = Depends(get_db)):
         "extracted_data": doc.extracted_data,
         "deadline": doc.deadline,
         "days_remaining": days_remaining,
-        "is_expiring_soon": days_remaining and days_remaining <= 7
+        "is_expiring_soon": days_remaining is not None and days_remaining <= 7
     }
 
 # 🔥 更新文件

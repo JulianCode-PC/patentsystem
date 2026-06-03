@@ -68,6 +68,7 @@
                         <th>文件名稱</th>
                         <th>文件類型</th>
                         <th>上傳日期</th>
+                        <th>發文日期</th>
                         <th>截止日</th>
                         <th>剩餘天數</th>
                         <th>操作</th>
@@ -90,6 +91,16 @@
                             {% endif %}
                         </td>
                         <td>{{ doc.uploaded_at.strftime('%Y/%m/%d') }}</td>
+                        
+                        <!-- 🔥 發文日期 -->
+                        <td>
+                            {% if doc.extracted_data and doc.extracted_data.dates and doc.extracted_data.dates.decision_date %}
+                                {{ doc.extracted_data.dates.decision_date[:10] }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        
                         <td>
                             {% if doc.deadline %}
                                 {{ doc.deadline.strftime('%Y/%m/%d') }}
@@ -97,13 +108,18 @@
                                 -
                             {% endif %}
                         </td>
+                        
                         <td>
                             {% if doc.deadline %}
                                 {% set days = (doc.deadline - now).days %}
                                 {% if days < 0 %}
-                                    <span class="badge bg-danger">過期 {{ -days }}天</span>
+                                    <span class="badge bg-danger">⚠️ 已截止</span>
+                                {% elif days == 0 %}
+                                    <span class="badge bg-warning text-dark">今天截止</span>
                                 {% elif days <= 7 %}
                                     <span class="badge bg-warning text-dark">{{ days }}天</span>
+                                {% elif days <= 30 %}
+                                    <span class="badge bg-info">{{ days }}天</span>
                                 {% else %}
                                     <span class="badge bg-success">{{ days }}天</span>
                                 {% endif %}
@@ -111,6 +127,7 @@
                                 -
                             {% endif %}
                         </td>
+                        
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
                                 <a href="/documents/{{ doc.id }}/preview" class="btn btn-outline-primary" target="_blank" title="預覽">

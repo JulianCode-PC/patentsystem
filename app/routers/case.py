@@ -9,6 +9,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi import UploadFile, File
 from app.services.pdf_service import PDFService
 import os
+import shutil
+import uuid
+from pathlib import Path
 
 # ------------------------------
 # 匯入 SQLAlchemy 的 Session
@@ -44,7 +47,7 @@ from app.schemas.case import CaseCreate, CaseUpdate, CaseOut
 # ------------------------------
 # 建立一個 router，設定 prefix 與 tag
 # ------------------------------
-router = APIRouter(prefix="/cases", tags=["cases"])  
+router = APIRouter(prefix="/api/cases", tags=["cases"])  
 # prefix="/cases" → 所有路由都會自動加上 /cases 開頭
 # tags → 在 Swagger UI 顯示分類名稱
 
@@ -130,13 +133,15 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 @router.post("/{case_id}/upload_pdf")
 async def upload_pdf(case_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     # 儲存檔案到本地
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    safe_name = Path(file.filename or "upload.pdf").name
+    stored_name = f"{uuid.uuid4().hex}_{safe_name}"
+    file_path = os.path.join(UPLOAD_DIR, stored_name)
     with open(file_path, "wb") as f:
-        f.write(await file.read())
+        shutil.copyfileobj(file.file, f)
 
     # 呼叫 service 存入 DB
     try:
-        document = PDFService.save_pdf_to_db(db, case_id, file_path, file.filename)
+        document, _ = PDFService.save_pdf_to_db(db, file_path, file.filename, case_id=case_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
